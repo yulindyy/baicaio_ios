@@ -1,0 +1,17 @@
+//
+//  SignModel.h
+//  CabbageNet
+//
+//  Created by xiang fu on 2017/8/7.
+//  Copyright © 2017年 MacAir. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+
+@interface SignModel : NSObject
+
+@property (nonatomic , copy)NSString *signID;
+@property (nonatomic , copy)NSString *tag;
+@property (nonatomic , copy)NSString *uid;
+
+@end

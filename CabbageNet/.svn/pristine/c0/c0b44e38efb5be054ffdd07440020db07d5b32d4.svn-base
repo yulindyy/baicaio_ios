@@ -1,0 +1,16 @@
+//
+//  FollowCollectionCell.h
+//  CabbageNet
+//
+//  Created by xiang fu on 2017/8/25.
+//  Copyright © 2017年 MacAir. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+@interface FollowCollectionCell : UICollectionViewCell
+
+@property (weak, nonatomic) IBOutlet UILabel *nameLabel;
+@property (weak, nonatomic) IBOutlet UIButton *followBtn;
+
+@end

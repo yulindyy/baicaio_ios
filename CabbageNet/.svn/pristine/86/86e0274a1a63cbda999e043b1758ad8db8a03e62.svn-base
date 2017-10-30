@@ -1,0 +1,262 @@
+//
+//  AllCommentViewController.m
+//  CabbageNet
+//
+//  Created by MacAir on 2017/4/8.
+//  Copyright © 2017年 MacAir. All rights reserved.
+//
+
+#import "AllCommentViewController.h"
+#import "DetailCommentCell.h"
+#import "EwenTextView.h"
+#import "AllCommentModel.h"
+#import "DiscountPrise.h"
+
+@interface AllCommentViewController ()<UITableViewDelegate,UITableViewDataSource>
+
+@property (nonatomic , strong)EwenTextView *textView;
+@property (nonatomic , strong)NSMutableArray *dataArr;
+@property (weak, nonatomic) IBOutlet UITableView *myTableView;
+
+@end
+
+@implementation AllCommentViewController{
+    NSInteger _currPage;
+    NSString *_commentid;
+}
+
+- (NSMutableArray *)dataArr{
+    if (!_dataArr) {
+        _dataArr = [NSMutableArray array];
+    }
+    return _dataArr;
+}
+
+- (EwenTextView *)textView{
+ 
+    if (!_textView) {
+        _textView = [[EwenTextView alloc]initWithFrame:CGRectMake(0, mScreenHeight-108, mScreenWidth, 44)];
+        _textView.backgroundColor = [UIColor colorWithWhite:0 alpha:0.3];
+        [_textView setPlaceholderText:@"请输入评论"];
+        __weak typeof(self)weakSelf = self;
+        __weak typeof(_textView)weakText = _textView;
+        _textView.EwenTextViewBlock = ^(NSString *test){
+//            test = [NSString stringWithUTF8String:[test UTF8String]];
+//            NSData *uniData = [test dataUsingEncoding:NSNonLossyASCIIStringEncoding];
+//            test = [[NSString alloc] initWithData:uniData encoding:NSUTF8StringEncoding] ;
+            if (weakText.commentPersonal.text.length){
+                [weakSelf requestComComment:[NSString stringWithFormat:@"%@|iphone",test]];
+            }else{
+                [weakSelf requestComment:[NSString stringWithFormat:@"%@|iphone",test]];
+            }
+            
+        };
+
+    }
+    return _textView;
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    
+    _currPage = 1;
+    
+    [IQKeyboardManager sharedManager].enableAutoToolbar = NO; 
+    [self.view addSubview:self.textView];
+    
+    self.myTableView.mj_header = [MJRefreshNormalHeader headerWithRefreshingBlock:^{
+        
+        _currPage = 1;
+        [self requestData];
+    }];
+    
+    self.myTableView.mj_footer = [MJRefreshBackNormalFooter footerWithRefreshingBlock:^{
+        
+        _currPage ++;
+        [self requestData];
+    }];
+    
+    [self requestData];
+}
+
+#pragma mark -- 对评论进行评论
+- (void)requestComComment:(NSString *)comment{
+    if (!comment.length) {
+        [MBProgressHUD showError:@"评论内容不能为空!" toView:nil];
+        return;
+    }
+    NSMutableDictionary * infoDic = [[NSMutableDictionary alloc]init];
+    setDickeyobj(infoDic, @"hf", @"api");
+    setDickeyobj(infoDic, _commentid, @"commentid");
+    setDickeyobj(infoDic, comment, @"content");
+    UserInfoModel *userinfo = [UserInfoModel sharedUserData];
+    setDickeyobj(infoDic, userinfo.userid, @"userid");
+    
+    NSMutableDictionary * param = [[NSMutableDictionary alloc]init];
+    setDickeyobj(param, infoDic, @"reqBody");
+    [MBProgressHUD showMessag:@"加载中..." toView:self.view];
+    [CKHttpCommunicate createRequest:HTTP_USER_API WithParam:param withMethod:POST success:^(id result) {
+        [MBProgressHUD hideHUDForView:self.view animated:YES];
+        if (SUCCESS_REQUEST(result)) {
+            
+            [self requestData];
+            NSLog(@"--%@--%@",result[@"msg"],result[@"data"]);
+            
+        }else{
+            [MBProgressHUD showError:result[@"msg"] toView:nil];
+        }
+        
+    } failure:^(NSError *erro) {
+        [MBProgressHUD hideHUDForView:self.view animated:YES];
+        NSLog(@"%@",erro);
+    } showHUD:nil];
+}
+
+
+#pragma mark -- 发表评论
+- (void)requestComment:(NSString *)comment{
+    
+    if (!comment.length) {
+        [MBProgressHUD showError:@"评论内容不能为空!" toView:nil];
+        return;
+    }
+    
+    NSMutableDictionary * infoDic = [[NSMutableDictionary alloc]init];
+    setDickeyobj(infoDic, @"comment", @"api");
+    UserInfoModel *model = [UserInfoModel sharedUserData];
+    setDickeyobj(infoDic, model.userid, @"userid");
+    setDickeyobj(infoDic, comment, @"info");
+    setDickeyobj(infoDic, self.xid, @"xid");
+    setDickeyobj(infoDic, self.shopid, @"id");
+    
+    NSMutableDictionary * param = [[NSMutableDictionary alloc]init];
+    setDickeyobj(param, infoDic, @"reqBody");
+    [MBProgressHUD showMessag:@"加载中..." toView:self.view];
+    [CKHttpCommunicate createRequest:HTTP_USER_API WithParam:param withMethod:POST success:^(id result) {
+        [MBProgressHUD hideHUDForView:self.view animated:YES];
+        if (SUCCESS_REQUEST(result)) {
+            
+            [self requestData];
+            NSLog(@"--%@--%@",result[@"msg"],result[@"data"]);
+            
+        }else{
+            [MBProgressHUD showError:result[@"msg"] toView:nil];
+        }
+        
+    } failure:^(NSError *erro) {
+        [MBProgressHUD hideHUDForView:self.view animated:YES];
+        NSLog(@"%@",erro);
+    } showHUD:nil];
+}
+
+
+#pragma mark -- 请求评论列表
+- (void)requestData{
+    
+    NSMutableDictionary * infoDic = [[NSMutableDictionary alloc]init];
+    setDickeyobj(infoDic, @"commentitem", @"api");
+    NSString *currPageStr = [NSString stringWithFormat:@"%ld",_currPage];
+    setDickeyobj(infoDic, currPageStr, @"page");
+    setDickeyobj(infoDic, self.shopid, @"shopid");
+    
+    NSMutableDictionary * param = [[NSMutableDictionary alloc]init];
+    setDickeyobj(param, infoDic, @"reqBody");
+    [MBProgressHUD showMessag:@"加载中..." toView:self.view];
+    [CKHttpCommunicate createRequest:HTTP_SHOP_API WithParam:param withMethod:POST success:^(id result) {
+        [MBProgressHUD hideHUDForView:self.view animated:YES];
+        [self.myTableView.mj_header endRefreshing];
+        [self.myTableView.mj_footer endRefreshing];
+        if (SUCCESS_REQUEST(result)) {
+            
+            if (_currPage == 1) {
+                [self.dataArr removeAllObjects];
+            }
+            for (NSDictionary *dic in result[@"data"]) {
+                AllCommentModel *model = [[AllCommentModel alloc] init];
+                [model mj_setKeyValues:dic];
+                model.commentID = dic[@"id"];
+                [self.dataArr addObject:model];
+            }
+            [self.myTableView reloadData];
+            
+        }else{
+            [MBProgressHUD showError:result[@"msg"] toView:nil];
+        }
+        
+    } failure:^(NSError *erro) {
+        [MBProgressHUD hideHUDForView:self.view animated:YES];
+        [self.myTableView.mj_header endRefreshing];
+        [self.myTableView.mj_footer endRefreshing];
+        NSLog(@"%@",erro);
+    } showHUD:nil];
+}
+
+#pragma mark tableView delegate
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    return self.dataArr.count;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    
+    DetailCommentCell *cell = [tableView dequeueReusableCellWithIdentifier:@"detailCommentCell"];
+    AllCommentModel *commentModel = self.dataArr[indexPath.row];
+    cell.model = commentModel;
+    UserInfoModel *usermodel = [UserInfoModel sharedUserData];
+    cell.zanBtn.selected = [DiscountPrise selectedCommentID:commentModel.commentID andUser:usermodel.userid andShopID:self.shopid];
+    cell.block = ^(UIButton *sender) {
+        if (sender.selected) {
+            [DiscountPrise deletedCommentID:commentModel.commentID andUser:usermodel.userid andShopID:self.shopid];
+            sender.selected = NO;
+            return ;
+        }
+        NSMutableDictionary * infoDic = [[NSMutableDictionary alloc]init];
+        setDickeyobj(infoDic, @"zan", @"api");
+        setDickeyobj(infoDic, commentModel.commentID, @"id");
+        setDickeyobj(infoDic, @"3", @"type");
+        NSMutableDictionary * param = [[NSMutableDictionary alloc]init];
+        setDickeyobj(param, infoDic, @"reqBody");
+        
+        [CKHttpCommunicate createRequest:HTTP_USER_API WithParam:param withMethod:POST success:^(id result) {
+            if (SUCCESS_REQUEST(result)) {
+                sender.selected = YES;
+                [DiscountPrise insertCommentID:commentModel.commentID andUser:usermodel.userid andShopID:self.shopid];
+            }
+        } failure:^(NSError *erro) {
+            NSLog(@"%@", erro);
+        } showHUD:nil];
+    };
+    return cell;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    CGFloat height = 80;
+    AllCommentModel *commentModel = self.dataArr[indexPath.row];
+    CGRect rect = [commentModel.info boundingRectWithSize:CGSizeMake(mScreenWidth - 30, MAXFLOAT) options:NSStringDrawingUsesLineFragmentOrigin attributes:@{NSFontAttributeName : [UIFont systemFontOfSize:13]} context:nil];
+    for (CommentListModel *model in commentModel.list) {
+        NSString *string = [NSString stringWithFormat:@"%@回复:%@",model.uname,model.info];
+        CGRect rect = [string boundingRectWithSize:CGSizeMake(mScreenWidth - 40, MAXFLOAT) options:NSStringDrawingUsesLineFragmentOrigin attributes:@{NSFontAttributeName : [UIFont systemFontOfSize:13]} context:nil];
+        height += rect.size.height;
+    }
+    height += rect.size.height;
+    height += (commentModel.list.count + 1) * 10;
+    return height;
+}
+
+
+- (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section{
+    return 0.01;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForFooterInSection:(NSInteger)section{
+    return 0.01;
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
+    AllCommentModel *commentModel = self.dataArr[indexPath.row];
+    self.textView.commentPersonal.text = [NSString stringWithFormat:@"  回复:%@",commentModel.uname];
+    _commentid = commentModel.commentID;
+    [self.textView.textView becomeFirstResponder];
+}
+
+
+@end

@@ -1,0 +1,115 @@
+//
+//  PushDateView.m
+//  CabbageNet
+//
+//  Created by xiang fu on 2017/8/14.
+//  Copyright © 2017年 MacAir. All rights reserved.
+//
+
+#import "PushDateView.h"
+
+@interface PushDateView ()
+
+@property (weak, nonatomic) IBOutlet UIPickerView *startPickerView;
+@property (weak, nonatomic) IBOutlet UIPickerView *endPickerView;
+@property (nonatomic , strong)UIButton *backBtn;
+
+@end
+
+@implementation PushDateView{
+    NSInteger _start;
+    NSInteger _end;
+}
+
+- (UIButton *)backBtn{
+    if (!_backBtn) {
+        _backBtn = [[UIButton alloc] initWithFrame:CGRectMake(0, 0, mScreenWidth, mScreenHeight)];
+        _backBtn.backgroundColor = [UIColor blackColor];
+        _backBtn.alpha = 0.5;
+        [_backBtn addTarget:self action:@selector(backBtnClick) forControlEvents:UIControlEventTouchUpInside];
+        [self.superview addSubview:_backBtn];
+    }
+    return _backBtn;
+}
+
+- (void)backBtnClick{
+    NSLog(@"---");
+    self.hidenView = YES;
+}
+
+- (IBAction)sureBtnClick {
+    if (_start > _end) return;
+    self.hidenView = YES;
+    if (self.Block)self.Block([NSString stringWithFormat:@"%ld,%ld",_start,_end]);
+}
+
++ (instancetype)getPushDateView{
+    return [[[NSBundle mainBundle] loadNibNamed:@"PushDateView" owner:nil options:nil]lastObject];
+}
+
+- (void)setSelected:(NSInteger)row1 andRow:(NSInteger)row2{
+    _start = row1;
+    _end = row2;
+    [self.startPickerView selectRow:row1 inComponent:0 animated:NO];
+    [self.endPickerView reloadAllComponents];
+    if (_start>_end) {
+        [self.endPickerView selectRow:_start + 1 inComponent:0 animated:NO];
+    }else{
+        [self.endPickerView selectRow:row2 - _start - 1 inComponent:0 animated:NO];
+    }
+    
+    
+}
+
+- (void)setHidenView:(BOOL)hidenView{
+    CGRect frame = self.frame;
+    if (hidenView){
+        [self.backBtn removeFromSuperview];
+        self.backBtn = nil;
+    }else{
+        [self backBtn];
+    }
+    [self.superview bringSubviewToFront:self];
+    frame.origin.y = hidenView ? mScreenHeight : mScreenHeight - frame.size.height - 64;
+    [UIView animateWithDuration:0.3 animations:^{
+        self.frame = frame;
+    }];
+}
+
+//指定pickerview有几个表盘
+-(NSInteger)numberOfComponentsInPickerView:(UIPickerView *)pickerView
+{
+    return 1;//第一个展示字母、第二个展示数字
+}
+
+//指定每个表盘上有几行数据
+-(NSInteger)pickerView:(UIPickerView *)pickerView numberOfRowsInComponent:(NSInteger)component
+{
+//    NSInteger
+    if (pickerView.tag == 1) return 24;
+    return 25 - _start - 1;
+}
+
+#pragma mark UIPickerView Delegate Method 代理方法
+
+//指定每行如何展示数据（此处和tableview类似）
+-(NSString *)pickerView:(UIPickerView *)pickerView titleForRow:(NSInteger)row forComponent:(NSInteger)component
+{
+    
+    if (pickerView.tag == 1) return [NSString stringWithFormat:@"%ld",row];
+    return [NSString stringWithFormat:@"%ld",row + _start + 1];
+}
+
+//选中某行后回调的方法，获得选中结果
+- (void)pickerView:(UIPickerView *)pickerView didSelectRow:(NSInteger)row inComponent:(NSInteger)component
+{
+    if (pickerView.tag == 1) {
+        _start = row;
+        [self.endPickerView reloadAllComponents];
+    }else{
+        _end = row + _start + 1;
+    }
+    NSLog(@"----%ld",row);
+}
+
+@end

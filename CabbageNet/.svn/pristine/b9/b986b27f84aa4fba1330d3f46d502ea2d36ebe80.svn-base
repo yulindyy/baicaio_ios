@@ -1,0 +1,280 @@
+//
+//  PushViewController.m
+//  CabbageNet
+//
+//  Created by xiang fu on 2017/8/4.
+//  Copyright © 2017年 MacAir. All rights reserved.
+//
+
+#import "PushViewController.h"
+#import "PushCell.h"
+#import "PushMoreCell.h"
+// 引入JPush功能所需头文件
+#import "JPUSHService.h"
+// iOS10注册APNs所需头文件
+#ifdef NSFoundationVersionNumber_iOS_9_x_Max
+#import <UserNotifications/UserNotifications.h>
+#endif
+// 如果需要使用idfa功能所需要引入的头文件（可选）
+#import <AdSupport/AdSupport.h>
+#import "PushDateView.h"
+#import <AudioToolbox/AudioToolbox.h>
+
+@interface PushViewController ()<UITableViewDelegate,UITableViewDataSource>
+
+@property (weak, nonatomic) IBOutlet UITableView *myTableView;
+@property (nonatomic, strong)UIView *coverView;
+@property (nonatomic, strong)PushDateView *pushDateView;
+
+@end
+
+@implementation PushViewController{
+    NSString *_pushTime;
+    NSMutableSet *_tagSet;
+}
+- (PushDateView *)pushDateView{
+    if (!_pushDateView) {
+        _pushDateView = [PushDateView getPushDateView];
+        _pushDateView.frame = CGRectMake(0, mScreenHeight, mScreenWidth, 226);
+        __weak typeof(self)weakSelf = self;
+        _pushDateView.Block = ^(NSString *tag) {
+            [weakSelf setPushTime:tag];
+        };
+        [self.view addSubview:_pushDateView];
+    }
+    return _pushDateView;
+}
+
+- (UIView *)coverView{
+    if (!_coverView) {
+        _coverView = [[UIView alloc] initWithFrame:CGRectMake(0, 44, mScreenWidth, mScreenHeight)];
+        _coverView.alpha = 0.5;
+        _coverView.backgroundColor = [UIColor blackColor];
+        _coverView.hidden = YES;
+        [self.view addSubview:_coverView];
+    }
+    return _coverView;
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+//    JPushNotificationRequest * jpushRequest = [[JPushNotificationRequest alloc] init];
+//    JPushNotificationContent *jpushContent = [[JPushNotificationContent alloc] init];
+//    jpushContent.sound = @"wusheng";
+//    JPushNotificationTrigger *jpushTrigger = [[JPushNotificationTrigger alloc] init];
+//    jpushTrigger.timeInterval = 1;
+//    jpushRequest.content = jpushContent;
+//    jpushRequest.trigger = jpushTrigger;
+//    jpushRequest.requestIdentifier = @"ii";
+//    [JPUSHService addNotification:jpushRequest];
+//    AudioServicesPlaySystemSound(kSystemSoundID_Vibrate);
+//    AudioServicesDisposeSystemSoundID(kSystemSoundID_Vibrate);
+    
+//    AudioServicesPlaySystemSound(1007);//短信铃声
+
+//    AudioServicesDisposeSystemSoundID(1008);
+    
+    if ([UserDefaultsGetSynchronize(@"openjpush") isEqualToString:@"9999"]){
+        self.coverView.hidden = NO;
+    }else{
+        self.coverView.hidden = YES;
+    }
+    [self getPushTime];
+    [self requestData];
+}
+
+- (void)getPushTime{
+    NSMutableDictionary * infoDic = [[NSMutableDictionary alloc]init];
+    setDickeyobj(infoDic, @"push_range_byuser", @"api");
+    UserInfoModel *model = [UserInfoModel sharedUserData];
+    setDickeyobj(infoDic, model.userid, @"userid");
+    NSMutableDictionary * param = [[NSMutableDictionary alloc]init];
+    setDickeyobj(param, infoDic, @"reqBody");
+    [MBProgressHUD showMessag:@"加载中..." toView:self.view];
+    [CKHttpCommunicate createRequest:HTTP_USER_API WithParam:param withMethod:POST success:^(id result) {
+        [MBProgressHUD hideHUDForView:self.view animated:YES];
+        if (SUCCESS_REQUEST(result)) {
+            NSArray *array = result[@"data"];
+            NSDictionary *dic = array.firstObject;
+            _pushTime = dic[@"push_range"];
+            [self.myTableView reloadRowsAtIndexPaths:@[[NSIndexPath indexPathForRow:4 inSection:0]] withRowAnimation:UITableViewRowAnimationNone];
+        }else
+            [MBProgressHUD showError:result[@"msg"] toView:nil];
+        
+    } failure:^(NSError *erro) {
+        NSLog(@"%@", erro);
+    } showHUD:nil];
+}
+
+- (void)requestData{
+    
+    NSMutableDictionary * infoDic = [[NSMutableDictionary alloc]init];
+    setDickeyobj(infoDic, @"notify_tag_byuser", @"api");
+    UserInfoModel *model = [UserInfoModel sharedUserData];
+    setDickeyobj(infoDic, model.userid, @"userid");
+    NSMutableDictionary * param = [[NSMutableDictionary alloc]init];
+    setDickeyobj(param, infoDic, @"reqBody");
+    [CKHttpCommunicate createRequest:HTTP_USER_API WithParam:param withMethod:POST success:^(id result) {
+        _tagSet = [[NSMutableSet alloc]init];
+        if (SUCCESS_REQUEST(result)) {
+            
+            for (NSDictionary *dic in result[@"data"]) {
+                [_tagSet addObject:dic[@"tag"]];
+            }
+        }else{
+            [MBProgressHUD showError:result[@"msg"] toView:nil];
+        }
+    } failure:^(NSError *erro) {
+        NSLog(@"%@",erro);
+    } showHUD:nil];
+}
+
+- (void)setPushTime:(NSString *)tag{
+    NSMutableDictionary * infoDic = [[NSMutableDictionary alloc]init];
+    setDickeyobj(infoDic, @"push_range_modify", @"api");
+    UserInfoModel *model = [UserInfoModel sharedUserData];
+    setDickeyobj(infoDic, model.userid, @"userid");
+    setDickeyobj(infoDic, tag, @"push_range");
+    NSMutableDictionary * param = [[NSMutableDictionary alloc]init];
+    setDickeyobj(param, infoDic, @"reqBody");
+    [MBProgressHUD showMessag:@"加载中..." toView:self.view];
+    [CKHttpCommunicate createRequest:HTTP_USER_API WithParam:param withMethod:POST success:^(id result) {
+        [MBProgressHUD hideHUDForView:self.view animated:YES];
+        if (SUCCESS_REQUEST(result)) {
+            _pushTime = tag;
+            [self.myTableView reloadRowsAtIndexPaths:@[[NSIndexPath indexPathForRow:4 inSection:0]] withRowAnimation:UITableViewRowAnimationNone];
+        }
+        [MBProgressHUD showError:result[@"msg"] toView:nil];
+        
+    } failure:^(NSError *erro) {
+        NSLog(@"%@", erro);
+    } showHUD:nil];
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    return 5;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    if (indexPath.row == 0) {
+        
+        PushCell *cell = [tableView dequeueReusableCellWithIdentifier:@"pushCell"];
+        cell.nameLabel.text = @"开启关注推送";
+        if ([UserDefaultsGetSynchronize(@"openjpush") isEqualToString:@"9999"]){
+            [cell.cellSwitch setOn:NO];
+        }else{
+            [cell.cellSwitch setOn:YES];
+        }
+        cell.Block = ^(BOOL isON) {
+            if (isON) {
+                self.coverView.hidden = YES;
+                UserDefaultsSynchronize(@"10001", @"openjpush");
+                [JPUSHService setTags:_tagSet completion:^(NSInteger iResCode, NSSet *iTags, NSInteger seq) {
+                    NSLog(@"%ld--%@--%ld",iResCode,iTags,seq);
+                } seq:1];
+            }else{
+                self.coverView.hidden = NO;
+                UserDefaultsSynchronize(@"9999", @"openjpush");
+                [JPUSHService deleteTags:_tagSet completion:^(NSInteger iResCode, NSSet *iTags, NSInteger seq) {
+                    NSLog(@"%ld--%@--%ld",iResCode,iTags,seq);
+                } seq:1];
+            }
+            [tableView reloadData];
+        };
+        return cell;
+    }else if (indexPath.row == 1){
+        
+        PushCell *cell = [tableView dequeueReusableCellWithIdentifier:@"pushCell"];
+        cell.nameLabel.text = @"声音";
+        if ([UserDefaultsGetSynchronize(@"openjpush") isEqualToString:@"9999"]){
+            [cell.cellSwitch setOn:NO];
+        }else{
+            if ([UserDefaultsGetSynchronize(@"opensound") isEqualToString:@"9999"]){
+                [cell.cellSwitch setOn:NO];
+            }else{
+                [cell.cellSwitch setOn:YES];
+            }
+        }
+        cell.Block = ^(BOOL isON) {
+            if(isON) {
+                UserDefaultsSynchronize(@"10001", @"opensound");
+            }else{
+                UserDefaultsSynchronize(@"9999", @"opensound");
+            }
+        };
+        return cell;
+    }else if (indexPath.row == 2){
+        
+        PushCell *cell = [tableView dequeueReusableCellWithIdentifier:@"pushCell"];
+        cell.nameLabel.text = @"震动";
+        if ([UserDefaultsGetSynchronize(@"openjpush") isEqualToString:@"9999"]){
+            [cell.cellSwitch setOn:NO];
+        }else{
+            if ([UserDefaultsGetSynchronize(@"openshock") isEqualToString:@"9999"]){
+                [cell.cellSwitch setOn:NO];
+            }else{
+                [cell.cellSwitch setOn:YES];
+            }
+        }
+        cell.Block = ^(BOOL isON) {
+            if(isON) {
+                UserDefaultsSynchronize(@"10001", @"openshock");
+            }else{
+                UserDefaultsSynchronize(@"9999", @"openshock");
+            }
+        };
+        return cell;
+    }else if (indexPath.row == 3){
+        PushCell *cell = [tableView dequeueReusableCellWithIdentifier:@"pushCell"];
+        cell.nameLabel.text = @"安静时段";
+        if ([UserDefaultsGetSynchronize(@"openjpush") isEqualToString:@"9999"]){
+            [cell.cellSwitch setOn:NO];
+        }else{
+            if (![UserDefaultsGetSynchronize(@"opensettime") isEqualToString:@"10001"]){
+                [cell.cellSwitch setOn:NO];
+            }else{
+                [cell.cellSwitch setOn:YES];
+            }
+        }
+        cell.Block = ^(BOOL isON) {
+            if(isON) {
+                UserDefaultsSynchronize(@"10001", @"opensettime");
+            }else{
+                UserDefaultsSynchronize(@"9999", @"opensettime");
+                [self setPushTime:@"0,24"];
+            }
+        };
+        return cell;
+    }
+    PushMoreCell *cell = [tableView dequeueReusableCellWithIdentifier:@"pushMoreCell"];
+    NSArray *array = [_pushTime componentsSeparatedByString:@","];
+    if (array.count == 2){
+        cell.nameLabel.text = [NSString stringWithFormat:@"从%@点到%@点",array[0],array[1]];
+    }else{
+        cell.nameLabel.text = @"从0点到7点";
+    }
+    return cell;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForFooterInSection:(NSInteger)section{
+    return 0.01;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section{
+    return 0.01;
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
+    if (indexPath.row == 4 && [UserDefaultsGetSynchronize(@"opensettime") isEqualToString:@"10001"]){
+        self.pushDateView.hidenView = NO;
+        NSArray *array = [_pushTime componentsSeparatedByString:@","];
+        if (array.count == 2){
+            [self.pushDateView setSelected:[array[0] integerValue] andRow:[array[1] integerValue]];
+        }else{
+            [self.pushDateView setSelected:0 andRow:7];
+        }
+        
+    }
+}
+
+@end

@@ -1,0 +1,27 @@
+//
+//  DiscountPrise.h
+//  CabbageNet
+//
+//  Created by xiang fu on 2017/7/7.
+//  Copyright © 2017年 MacAir. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+#import "FMDB.h"
+
+@interface DiscountPrise : NSObject
+
++ (BOOL)insertDiscountID:(NSString *)discountID andUser:(NSString *)user andIsDiscount:(BOOL)isDiscount;
++ (BOOL)selectedDiscountID:(NSString *)discountID andUser:(NSString *)user andIsDiscount:(BOOL)isDiscount;
++ (BOOL)deletedDiscountID:(NSString *)discountID andUser:(NSString *)user andIsDiscount:(BOOL)isDiscount;
++ (void)selectedAll:(BOOL)isDiscount;
+
++ (BOOL)insertCommentID:(NSString *)CommentID andUser:(NSString *)user andShopID:(NSString *)ShopID;
++ (BOOL)selectedCommentID:(NSString *)CommentID andUser:(NSString *)user andShopID:(NSString *)ShopID;
++ (BOOL)deletedCommentID:(NSString *)CommentID andUser:(NSString *)user andShopID:(NSString *)ShopID;
+
++ (NSArray *)selectedHistory;
++ (void)deletedHistory:(NSString *)string;
++ (void)insertHistory:(NSString *)string;
+
+@end

@@ -1,0 +1,238 @@
+//
+//  CommentInfoCell.m
+//  CabbageNet
+//
+//  Created by MacAir on 2017/4/7.
+//  Copyright © 2017年 MacAir. All rights reserved.
+//
+
+#import "CommentInfoCell.h"
+#import "SQMenuShowView.h"
+
+@interface CommentInfoCell ()
+
+@property (weak, nonatomic) IBOutlet UIImageView *headImageView;
+@property (weak, nonatomic) IBOutlet UILabel *nameLable;
+@property (weak, nonatomic) IBOutlet UILabel *commentLabel;
+@property (weak, nonatomic) IBOutlet UIImageView *bigImageView;
+@property (weak, nonatomic) IBOutlet UILabel *infoLabel;
+@property (weak, nonatomic) IBOutlet UILabel *priceLabel;
+@property (weak, nonatomic) IBOutlet UILabel *fromeLabel;
+@property (weak, nonatomic) IBOutlet UILabel *timeLabel;
+@property (weak, nonatomic) IBOutlet UIButton *zanBtn;
+@property (weak, nonatomic) IBOutlet UIButton *commentsBtn;
+//@property (strong, nonatomic)  SQMenuShowView *showView;
+
+@end
+
+@implementation CommentInfoCell{
+//    BOOL _showing;
+}
+
+//- (SQMenuShowView *)showView{
+//    
+//    if (!_showView) {
+//        _showView = [[SQMenuShowView alloc]initWithFrame:CGRectMake(mScreenWidth - 110, 25, 100, 0)
+//                                                   items:@[@"分享",@"删除"]
+//                                               showPoint:(CGPoint){mScreenWidth - 40,80}];
+//        
+//        _showView.sq_backGroundColor = toPCcolor(@"#505050");
+//        _showView.itemTextColor = [UIColor whiteColor];
+//        [self addSubview:_showView];
+//    }
+//    return _showView;
+//}
+
+- (void)setModel:(MYCommentsModel *)model{
+    
+    NSString *infoText = model.info;
+    if ([model.info containsString:@"|"]) {
+        NSRange range = [model.info rangeOfString:@"|"];
+        infoText = [model.info substringToIndex:range.location];
+    }
+    self.commentLabel.attributedText = [self replaceEmotion:infoText];
+    [self.bigImageView sd_setImageWithURL:[NSURL URLWithString:model.img] placeholderImage:[UIImage imageNamed:@"正方形占位图"]];
+    NSString *strUrl = [model.title stringByReplacingOccurrencesOfString:@"<span>" withString:@"<span style=\"color:#ff4444\">"];//替换字符
+    NSAttributedString * attrStr = [[NSAttributedString alloc] initWithData:[strUrl dataUsingEncoding:NSUnicodeStringEncoding] options:@{ NSDocumentTypeDocumentAttribute: NSHTMLTextDocumentType } documentAttributes:nil error:nil];
+    self.infoLabel.attributedText = attrStr;
+    self.priceLabel.text = @"";
+    self.fromeLabel.text = @"";
+    self.timeLabel.text = [self timestampSwitchTime:[model.add_time integerValue]];
+    [self.zanBtn setTitle:@"0" forState:UIControlStateNormal];
+    [self.commentsBtn setTitle:@"0" forState:UIControlStateNormal];
+    
+//    if (model.showing)  {
+//        _showing = YES;
+//        [self.showView showView];
+//    }else{
+//        _showing = NO;
+//        [self.showView dismissView];
+//    }
+    
+}
+
+- (NSAttributedString *)replaceEmotion:(NSString *)infoText{
+    
+    NSString *filePath = [[NSBundle mainBundle] pathForResource:@"allEmotion" ofType:@"plist"];
+    NSArray *face = [NSArray arrayWithContentsOfFile:filePath];
+    NSMutableAttributedString *attributeString = [[NSMutableAttributedString alloc] initWithString:infoText];
+    NSString *regex_emoji = @"\\[(\\S+?)\\]";//@"\\[[a-zA-Z0-9\\/\\u4e00-\\u9fa5]+\\]";//匹配表情
+    NSError *error =nil;
+    NSRegularExpression *re = [NSRegularExpression regularExpressionWithPattern:regex_emoji options:NSRegularExpressionCaseInsensitive error:&error];
+    if(!re) {
+        NSLog(@"%@", [error localizedDescription]);
+        return attributeString;
+    }
+    NSArray *resultArray = [re matchesInString:infoText options:0 range:NSMakeRange(0, infoText.length)];
+    NSMutableArray *imageArray = [NSMutableArray arrayWithCapacity:resultArray.count];
+    //根据匹配范围来用图片进行相应的替换
+    for(NSTextCheckingResult *match in resultArray) {
+        //获取数组元素中得到range
+        NSRange range = [match range];
+        //获取原字符串中对应的值
+        NSString *subStr = [infoText substringWithRange:range];
+        for(int i =0; i < face.count; i ++) {
+            if([face[i][@"cht"] isEqualToString:subStr]) {
+                //face[i][@"png"]就是我们要加载的图片
+                //新建文字附件来存放我们的图片,iOS7才新加的对象
+                NSTextAttachment *textAttachment = [[NSTextAttachment alloc]init];
+                //给附件添加图片
+                textAttachment.image= [UIImage imageNamed:face[i][@"png"]];
+                //调整一下图片的位置,如果你的图片偏上或者偏下，调整一下bounds的y值即可
+                textAttachment.bounds=CGRectMake(0, -3, textAttachment.image.size.width - 8, textAttachment.image.size.height - 8);
+                //把附件转换成可变字符串，用于替换掉源字符串中的表情文字
+                NSAttributedString *imageStr = [NSAttributedString attributedStringWithAttachment:textAttachment];
+                //把图片和图片对应的位置存入字典中
+                NSMutableDictionary *imageDic = [NSMutableDictionary dictionaryWithCapacity:2];
+                [imageDic setObject:imageStr forKey:@"image"];
+                [imageDic setObject:[NSValue valueWithRange:range]forKey:@"range"];
+                //把字典存入数组中
+                [imageArray addObject:imageDic];
+                break;
+            }
+        }
+    }
+    //4、从后往前替换，否则会引起位置问题
+    for(int i = (int)imageArray.count-1; i >=0; i--) {
+        NSRange range;
+        [imageArray[i][@"range"] getValue:&range];
+        //进行替换
+        [attributeString replaceCharactersInRange:range withAttributedString:imageArray[i][@"image"]];
+    }
+    return attributeString;
+}
+
+- (IBAction)moreBtnClick {
+    
+//    if (_showing) {
+//        _showing = NO;
+//        [self.showView dismissView];
+//        return;
+//    }
+//    _showing = YES;
+//    [self.showView showView];
+//    if (self.block) {
+//        self.block(0);
+//    }
+//    [self.showView selectBlock:^(SQMenuShowView *view, NSInteger index) {
+//        if (index == 0){
+//            
+//            if (self.block) {
+//                self.block(1);
+//            }
+//        }else if (index == 1){
+            if (self.block) {
+                self.block(2);
+            }
+//        }
+//    }];
+    
+    
+}
+
+- (void)awakeFromNib {
+    [super awakeFromNib];
+    // Initialization code
+    UserInfoModel *model = [UserInfoModel sharedUserData];
+    if (model.imageBase64Code.length) {
+        UIImage *image = [UIImage imageWithData:[[NSData data] initWithBase64Encoding:model.imageBase64Code]];
+        self.headImageView.image = image;
+    }else{
+        [self.headImageView sd_setImageWithURL:[NSURL URLWithString:model.headImageUrl] placeholderImage:[UIImage imageNamed:@"头像"] completed:^(UIImage * _Nullable image, NSError * _Nullable error, SDImageCacheType cacheType, NSURL * _Nullable imageURL) {
+            if (!error) {
+                NSData *data = UIImageJPEGRepresentation(image, 0.1f);
+                model.imageBase64Code =  [data base64Encoding];
+                [UserInfoModel storeUserWithModel:model];
+            }
+        }];
+    }
+    NSLog(@"++++++%@",model.username);
+    self.nameLable.text = model.username;
+}
+
+- (void)setSelected:(BOOL)selected animated:(BOOL)animated {
+    [super setSelected:selected animated:animated];
+
+    // Configure the view for the selected state
+}
+
+- (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event{
+    UITouch *touch = [touches anyObject];
+
+    // 当前触摸点，设置以自己为参照，坐标原点为自己（self）的左上角
+    CGPoint current = [touch locationInView:self];
+    
+    
+    if (current.y > 68 && current.y < 170) {
+        
+        if (self.block) {
+            self.block(3);
+        };
+    }else{
+        if (self.block) {
+            self.block(4);
+        };
+    }
+    
+}
+
+-(NSString *)timestampSwitchTime:(NSInteger)timestamp{
+    //更具时间差获取的时间
+    NSDate *confromTimesp = [NSDate dateWithTimeIntervalSince1970:timestamp];
+    //当前时间
+    NSDate *newdate = [NSDate date];
+    //日历
+    NSCalendar *cal = [NSCalendar currentCalendar];
+    
+    unsigned int unitFlags = NSCalendarUnitDay | NSCalendarUnitHour | NSCalendarUnitMinute;
+    
+    NSDateComponents *datecom = [cal components:unitFlags fromDate:confromTimesp toDate:newdate options:0];
+    
+    if ([datecom day] < 1){
+        if ([datecom hour] < 1){
+            if ([datecom minute] < 1){
+                return @"刚刚";
+            }else{
+                return [NSString stringWithFormat:@"%ld分钟前",[datecom minute]];
+            }
+        }else{
+            
+            return [NSString stringWithFormat:@"%ld小时前",[datecom hour]];
+        }
+    }else{
+        NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
+        
+        [formatter setDateStyle:NSDateFormatterMediumStyle];
+        [formatter setTimeStyle:NSDateFormatterShortStyle];
+        [formatter setDateFormat:@"MM-dd  HH:mm"];
+        NSTimeZone *timeZone = [NSTimeZone timeZoneWithName:@"Asia/Beijing"];
+        [formatter setTimeZone:timeZone];
+        NSString *confromTimespStr = [formatter stringFromDate:confromTimesp];
+        return confromTimespStr;
+    }
+    
+    return nil;
+    
+}
+
+@end

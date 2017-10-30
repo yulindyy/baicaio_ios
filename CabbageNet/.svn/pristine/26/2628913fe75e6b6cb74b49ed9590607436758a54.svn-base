@@ -1,0 +1,284 @@
+//
+//  AppDelegate.m
+//  CabbageNet
+//
+//  Created by MacAir on 2017/4/5.
+//  Copyright © 2017年 MacAir. All rights reserved.
+//
+
+#import "AppDelegate.h"
+#import "LoginViewController.h"
+#import "BaseNavigationController.h"
+#import "AllCommentViewController.h"
+#import "SendArticleViewController.h"
+#import <UMSocialCore/UMSocialCore.h>
+#import "MTVersionHelper.h"
+#import "IntegralDetailViewController.h"
+// 引入JPush功能所需头文件
+#import "JPUSHService.h"
+// iOS10注册APNs所需头文件
+#ifdef NSFoundationVersionNumber_iOS_9_x_Max
+#import <UserNotifications/UserNotifications.h>
+#endif
+// 如果需要使用idfa功能所需要引入的头文件（可选）
+#import <AdSupport/AdSupport.h>
+#import "DetailInfoViewController.h"
+#import "OriginalDetailViewController.h"
+
+@interface AppDelegate ()<JPUSHRegisterDelegate,UNUserNotificationCenterDelegate>
+
+@end
+
+@implementation AppDelegate
+
+
+- (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
+    
+    [MTVersionHelper checkNewVersion];
+    UserDefaultsSynchronize(@"10001", @"showStart");
+    // 设置键盘监听管理
+    [[[IQKeyboardManager sharedManager] disabledDistanceHandlingClasses] addObjectsFromArray:@[[AllCommentViewController class],[IntegralDetailViewController class]]];
+//    [[IQKeyboardManager sharedManager] disabledToolbarClasses] addObjectsFromArray:@[]
+    
+    [UIApplication sharedApplication].statusBarStyle = UIStatusBarStyleLightContent;
+    
+//    if (![UserDefaultsGetSynchronize(@"login") isEqualToString:@"10001"]) {
+//        NSLog(@"%@",UserDefaultsGetSynchronize(@"login"));
+//        LoginViewController *login = [[UIStoryboard storyboardWithName:@"Main" bundle:nil] instantiateViewControllerWithIdentifier:@"loginViewController"];
+//        BaseNavigationController *nav = [[BaseNavigationController alloc] initWithRootViewController:login];
+//        
+//        self.window.rootViewController = nav;
+//    }
+    
+    /* 打开调试日志 */
+    [[UMSocialManager defaultManager] openLog:YES];
+    
+    /* 设置友盟appkey */
+    [[UMSocialManager defaultManager] setUmSocialAppkey:@"592f7425f29d985cce000a42"];
+    
+    [self configUSharePlatforms];
+    
+    [self confitUShareSettings];
+    
+    
+    //Required
+    //notice: 3.0.0及以后版本注册可以这样写，也可以继续用之前的注册方式
+    JPUSHRegisterEntity * entity = [[JPUSHRegisterEntity alloc] init];
+    NSLog(@"----");
+    entity.types = JPAuthorizationOptionAlert;//|JPAuthorizationOptionBadge|JPAuthorizationOptionSound;
+
+    if ([[UIDevice currentDevice].systemVersion floatValue] >= 8.0) {
+        // 可以添加自定义categories
+        // NSSet<UNNotificationCategory *> *categories for iOS10 or later
+        // NSSet<UIUserNotificationCategory *> *categories for iOS8 and iOS9
+    }
+    [JPUSHService registerForRemoteNotificationConfig:entity delegate:self];
+    
+    // Optional
+    // 获取IDFA
+    // 如需使用IDFA功能请添加此代码并在初始化方法的advertisingIdentifier参数中填写对应值
+//    NSString *advertisingId = [[[ASIdentifierManager sharedManager] advertisingIdentifier] UUIDString];
+    
+    // Required
+    // init Push
+    // notice: 2.1.5版本的SDK新增的注册方法，改成可上报IDFA，如果没有使用IDFA直接传nil
+    // 如需继续使用pushConfig.plist文件声明appKey等配置内容，请依旧使用[JPUSHService setupWithOption:launchOptions]方式初始化。
+    [JPUSHService setupWithOption:launchOptions appKey:@"7c7de5f8d6948b005eb91a50"
+                          channel:@"Publish channel"
+                 apsForProduction:NO
+            advertisingIdentifier:nil];
+    return YES;
+}
+
+- (void)application:(UIApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken {
+    
+    /// Required - 注册 DeviceToken
+    [JPUSHService registerDeviceToken:deviceToken];
+}
+
+- (void)application:(UIApplication *)application didFailToRegisterForRemoteNotificationsWithError:(NSError *)error {
+    //Optional
+    NSLog(@"did Fail To Register For Remote Notifications With Error: %@", error);
+}
+
+#pragma mark- JPUSHRegisterDelegate
+
+// iOS 10 Support
+- (void)jpushNotificationCenter:(UNUserNotificationCenter *)center willPresentNotification:(UNNotification *)notification withCompletionHandler:(void (^)(NSInteger))completionHandler {
+    // Required
+    NSDictionary * userInfo = notification.request.content.userInfo;
+    if([notification.request.trigger isKindOfClass:[UNPushNotificationTrigger class]]) {
+        [JPUSHService handleRemoteNotification:userInfo];
+    }
+    NSLog(@"xxxxx%@",userInfo);
+    completionHandler(UNAuthorizationOptionBadge); // 需要执行这个方法，选择是否提醒用户，有Badge、Sound、Alert三种类型可以选择设置
+}
+
+// iOS 10 Support
+- (void)jpushNotificationCenter:(UNUserNotificationCenter *)center didReceiveNotificationResponse:(UNNotificationResponse *)response withCompletionHandler:(void (^)())completionHandler {
+    // Required
+    NSDictionary * userInfo = response.notification.request.content.userInfo;
+    
+//    UNNotificationRequest *request = response.notification.request; // 收到推送的请求
+//    UNNotificationContent *content = request.content; // 收到推送的消息内容
+//    NSNumber *badge = content.badge;  // 推送消息的角标
+//    NSString *body = content.body;    // 推送消息体
+//    UNNotificationSound *sound = [UNNotificationSound soundNamed:@"wusheng.mp3"];  // 推送消息的声音
+//    NSString *subtitle = content.subtitle;  // 推送消息的副标题
+//    NSString *title = content.title;  // 推送消息的标题
+    
+    NSLog(@"-----%@",userInfo);
+    [self goToMssageViewControllerWith:userInfo];
+    
+    if([response.notification.request.trigger isKindOfClass:[UNPushNotificationTrigger class]]) {
+        [JPUSHService handleRemoteNotification:userInfo];
+    }
+    completionHandler();  // 系统要求执行这个方法
+}
+
+
+- (void)goToMssageViewControllerWith:(NSDictionary*)msgDic{
+    
+    [self.window.rootViewController dismissViewControllerAnimated:YES completion:nil];
+    NSString *dataStr = [msgDic valueForKey:@"data"];
+    if (!dataStr.length) return;
+    if ([[msgDic valueForKey:@"type"] isEqualToString:@"article"]) {
+        
+        OriginalDetailViewController * VC = [[UIStoryboard storyboardWithName:@"Main" bundle:nil] instantiateViewControllerWithIdentifier:@"originalDetailViewController"];
+        VC.articleid = dataStr;
+        BaseNavigationController * Nav = [[BaseNavigationController alloc]initWithRootViewController:VC];
+        [self.window.rootViewController presentViewController:Nav animated:YES completion:nil];
+    }else if ([[msgDic valueForKey:@"type"] isEqualToString:@"shop"]){
+        
+        DetailInfoViewController * VC = [[UIStoryboard storyboardWithName:@"Main" bundle:nil] instantiateViewControllerWithIdentifier:@"detailInfoViewController"];
+        VC.shopid = dataStr;
+        BaseNavigationController * Nav = [[BaseNavigationController alloc]initWithRootViewController:VC];
+        [self.window.rootViewController presentViewController:Nav animated:YES completion:nil];
+        
+    }
+    
+}
+
+- (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo fetchCompletionHandler:(void (^)(UIBackgroundFetchResult))completionHandler {
+    
+    // Required, iOS 7 Support
+    [JPUSHService handleRemoteNotification:userInfo];
+    completionHandler(UIBackgroundFetchResultNewData);
+}
+
+- (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo {
+    
+    // Required,For systems with less than or equal to iOS6
+    [JPUSHService handleRemoteNotification:userInfo];
+}
+
+
+- (void)confitUShareSettings
+{
+    
+    NSLog(@"---");
+    /*
+     * 打开图片水印
+     */
+    //[UMSocialGlobal shareInstance].isUsingWaterMark = YES;
+    
+    /*
+     * 关闭强制验证https，可允许http图片分享，但需要在info.plist设置安全域名
+     <key>NSAppTransportSecurity</key>
+     <dict>
+     <key>NSAllowsArbitraryLoads</key>
+     <true/>
+     </dict>
+     */
+    [UMSocialGlobal shareInstance].isUsingHttpsWhenShareContent = NO;
+    
+}
+
+- (void)configUSharePlatforms
+{
+    /* 设置微信的appKey和appSecret */
+    [[UMSocialManager defaultManager] setPlaform:UMSocialPlatformType_WechatSession appKey:@"wxa441c5596b23d32e" appSecret:@"dc782dbd654189c593800896ae3658c8" redirectURL:@"http://mobile.umeng.com/social"];
+    /*
+     * 移除相应平台的分享，如微信收藏
+     */
+    //[[UMSocialManager defaultManager] removePlatformProviderWithPlatformTypes:@[@(UMSocialPlatformType_WechatFavorite)]];
+    
+    /* 设置分享到QQ互联的appID
+     * U-Share SDK为了兼容大部分平台命名，统一用appKey和appSecret进行参数设置，而QQ平台仅需将appID作为U-Share的appKey参数传进即可。
+     */
+    [[UMSocialManager defaultManager] setPlaform:UMSocialPlatformType_QQ appKey:@"101272626"/*设置QQ平台的appID*/  appSecret:nil redirectURL:@"http://mobile.umeng.com/social"];
+    
+    /* 设置新浪的appKey和appSecret */
+    [[UMSocialManager defaultManager] setPlaform:UMSocialPlatformType_Sina appKey:@"1029124434"  appSecret:@"7b108f0f0dbb40b5d1a86d0b45b3a35c" redirectURL:@"http://open.weibo.com/apps/1029124434/privilege/oauth"];//
+    //https://sns.whalecloud.com/sina2/callback
+    
+}
+//- (BOOL)application:(UIApplication *)app openURL:(NSURL *)url options:(NSDictionary<UIApplicationOpenURLOptionsKey, id> *)options
+//{
+//    //6.3的新的API调用，是为了兼容国外平台(例如:新版facebookSDK,VK等)的调用[如果用6.2的api调用会没有回调],对国内平台没有影响
+//    BOOL result = [[UMSocialManager defaultManager]  handleOpenURL:url options:options];
+//    if (!result) {
+//        NSLog(@"backsuccess1");
+//        // 其他如支付等SDK的回调
+//    }else{
+//        NSLog(@"backfaile1");
+//    }
+//    return result;
+//}
+//
+//- (BOOL)application:(UIApplication *)application handleOpenURL:(NSURL *)url
+//{
+//    BOOL result = [[UMSocialManager defaultManager] handleOpenURL:url];
+//    if (!result) {
+//        // 其他如支付等SDK的回调
+//        NSLog(@"backsuccess2");
+//    }else{
+//        NSLog(@"backfaile2");
+//    }
+//    return result;
+//}
+
+// 支持所有iOS系统
+- (BOOL)application:(UIApplication *)application openURL:(NSURL *)url sourceApplication:(NSString *)sourceApplication annotation:(id)annotation
+{
+    //6.3的新的API调用，是为了兼容国外平台(例如:新版facebookSDK,VK等)的调用[如果用6.2的api调用会没有回调],对国内平台没有影响
+    BOOL result = [[UMSocialManager defaultManager] handleOpenURL:url sourceApplication:sourceApplication annotation:annotation];
+    if (!result) {
+        // 其他如支付等SDK的回调
+        NSLog(@"backsuccess3");
+    }else{
+        NSLog(@"backfaile3");
+    }
+    return result;
+}
+
+- (void)applicationWillResignActive:(UIApplication *)application {
+    // Sent when the application is about to move from active to inactive state. This can occur for certain types of temporary interruptions (such as an incoming phone call or SMS message) or when the user quits the application and it begins the transition to the background state.
+    // Use this method to pause ongoing tasks, disable timers, and invalidate graphics rendering callbacks. Games should use this method to pause the game.
+}
+
+
+- (void)applicationDidEnterBackground:(UIApplication *)application {
+    // Use this method to release shared resources, save user data, invalidate timers, and store enough application state information to restore your application to its current state in case it is terminated later.
+    // If your application supports background execution, this method is called instead of applicationWillTerminate: when the user quits.
+}
+
+
+- (void)applicationWillEnterForeground:(UIApplication *)application {
+    // Called as part of the transition from the background to the active state; here you can undo many of the changes made on entering the background.
+    [UIApplication sharedApplication].applicationIconBadgeNumber = 0;
+}
+
+
+- (void)applicationDidBecomeActive:(UIApplication *)application {
+    // Restart any tasks that were paused (or not yet started) while the application was inactive. If the application was previously in the background, optionally refresh the user interface.
+    [UIApplication sharedApplication].applicationIconBadgeNumber = 0;
+}
+
+
+- (void)applicationWillTerminate:(UIApplication *)application {
+    // Called when the application is about to terminate. Save data if appropriate. See also applicationDidEnterBackground:.
+}
+
+
+@end

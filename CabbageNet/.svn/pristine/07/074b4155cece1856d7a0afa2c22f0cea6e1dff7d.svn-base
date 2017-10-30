@@ -1,0 +1,152 @@
+//
+//  SignListViewController.m
+//  CabbageNet
+//
+//  Created by xiang fu on 2017/8/7.
+//  Copyright © 2017年 MacAir. All rights reserved.
+//
+
+#import "SignListViewController.h"
+#import "AttentionCell.h"
+#import "SearchViewController.h"
+#import "SignModel.h"
+// 引入JPush功能所需头文件
+#import "JPUSHService.h"
+// iOS10注册APNs所需头文件
+#ifdef NSFoundationVersionNumber_iOS_9_x_Max
+#import <UserNotifications/UserNotifications.h>
+#endif
+// 如果需要使用idfa功能所需要引入的头文件（可选）
+#import <AdSupport/AdSupport.h>
+
+@interface SignListViewController ()<UITableViewDelegate,UITableViewDataSource>
+
+@property (weak, nonatomic) IBOutlet UITableView *myTableView;
+@property (nonatomic , strong)NSMutableArray *dataList;
+@property (weak, nonatomic) IBOutlet UILabel *numLabel;
+
+@end
+
+@implementation SignListViewController
+
+- (NSMutableArray *)dataList{
+    if (!_dataList) _dataList = [NSMutableArray array]; return _dataList;
+}
+
+- (void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:YES];
+    [self.myTableView.mj_header beginRefreshing];
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.myTableView.mj_header = [MJRefreshNormalHeader headerWithRefreshingBlock:^{
+        [self requestData];
+    }];
+    [self requestData];
+}
+
+- (void)requestData{
+    
+    NSMutableDictionary * infoDic = [[NSMutableDictionary alloc]init];
+    setDickeyobj(infoDic, @"notify_tag_byuser", @"api");
+    UserInfoModel *model = [UserInfoModel sharedUserData];
+    setDickeyobj(infoDic, model.userid, @"userid");
+    NSMutableDictionary * param = [[NSMutableDictionary alloc]init];
+    setDickeyobj(param, infoDic, @"reqBody");
+    [CKHttpCommunicate createRequest:HTTP_USER_API WithParam:param withMethod:POST success:^(id result) {
+        [self.myTableView.mj_header endRefreshing];
+        [self.dataList removeAllObjects];
+        if (SUCCESS_REQUEST(result)) {
+            
+            for (NSDictionary *dic in result[@"data"]) {
+                SignModel *model = [[SignModel alloc] init];
+                [model mj_setKeyValues:dic];
+                model.signID = dic[@"id"];
+                [self.dataList addObject:model];
+            }
+            
+            self.numLabel.text = [NSString stringWithFormat:@"(%ld/10)",self.dataList.count];
+        }else{
+            
+            [MBProgressHUD showError:result[@"msg"] toView:nil];
+        }
+        [self.myTableView reloadData];
+    } failure:^(NSError *erro) {
+        [self.myTableView.mj_header endRefreshing];
+        NSLog(@"%@",erro);
+    } showHUD:nil];
+}
+
+- (IBAction)btnClick {
+    if (self.dataList.count >= 10) {
+        [MBProgressHUD showError:@"关注数量已达上限" toView:nil];
+        return;
+    }
+    SearchViewController *controller = [[UIStoryboard storyboardWithName:@"Main" bundle:nil] instantiateViewControllerWithIdentifier:@"searchViewController"];
+    controller.isJump = NO;
+    [self.navigationController pushViewController:controller animated:YES];
+}
+
+#pragma mark -- tableView delegate
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView{
+    return self.dataList.count;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    return 1;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    AttentionCell *cell = [tableView dequeueReusableCellWithIdentifier:@"attentionCell"];
+    SignModel *model = self.dataList[indexPath.section];
+    cell.nameLabel.text = model.tag;
+    cell.Block = ^{
+        NSMutableDictionary * infoDic = [[NSMutableDictionary alloc]init];
+        setDickeyobj(infoDic, @"notify_tag_del", @"api");
+        setDickeyobj(infoDic, model.signID, @"id");
+        NSMutableDictionary * param = [[NSMutableDictionary alloc]init];
+        setDickeyobj(param, infoDic, @"reqBody");
+        [CKHttpCommunicate createRequest:HTTP_USER_API WithParam:param withMethod:POST success:^(id result) {
+            if (SUCCESS_REQUEST(result)) {
+                [JPUSHService deleteTags:[NSSet setWithObjects:model.tag, nil] completion:^(NSInteger iResCode, NSSet *iTags, NSInteger seq) {
+                    NSLog(@"%ld--%@--%ld",iResCode,iTags,seq);
+                } seq:1];
+                [self.dataList removeObjectAtIndex:indexPath.section];
+                self.numLabel.text = [NSString stringWithFormat:@"(%ld/10)",self.dataList.count];
+            }else{
+                [MBProgressHUD showError:result[@"msg"] toView:nil];
+            }
+            [self.myTableView reloadData];
+        } failure:^(NSError *erro) {
+            [self.myTableView.mj_header endRefreshing];
+            NSLog(@"%@",erro);
+        } showHUD:nil];
+    };
+    return cell;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section{
+    return 10;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForFooterInSection:(NSInteger)section{
+    return 0.01;
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

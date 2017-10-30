@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="12121" systemVersion="16G29" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" colorMatched="YES">
+    <device id="retina4_7" orientation="portrait">
+        <adaptation id="fullscreen"/>
+    </device>
+    <dependencies>
+        <deployment identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="12089"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <objects>
+        <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner"/>
+        <placeholder placeholderIdentifier="IBFirstResponder" id="-2" customClass="UIResponder"/>
+        <view contentMode="scaleToFill" id="eK6-l8-Dhd" customClass="StartView">
+            <rect key="frame" x="0.0" y="0.0" width="375" height="667"/>
+            <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+            <subviews>
+                <imageView userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="qidong.png" translatesAutoresizingMaskIntoConstraints="NO" id="Jc6-Sy-t7S">
+                    <rect key="frame" x="0.0" y="0.0" width="375" height="667"/>
+                </imageView>
+                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="KVt-rX-hDc">
+                    <rect key="frame" x="0.0" y="567" width="375" height="100"/>
+                    <constraints>
+                        <constraint firstAttribute="height" constant="100" id="EwM-d5-TX3"/>
+                    </constraints>
+                    <connections>
+                        <action selector="btnClick" destination="eK6-l8-Dhd" eventType="touchUpInside" id="L1j-HA-kWB"/>
+                    </connections>
+                </button>
+            </subviews>
+            <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
+            <constraints>
+                <constraint firstAttribute="bottom" secondItem="Jc6-Sy-t7S" secondAttribute="bottom" id="4Md-vd-9kV"/>
+                <constraint firstItem="Jc6-Sy-t7S" firstAttribute="leading" secondItem="eK6-l8-Dhd" secondAttribute="leading" id="IWv-BS-BKK"/>
+                <constraint firstAttribute="bottom" secondItem="KVt-rX-hDc" secondAttribute="bottom" id="Ihb-Lf-3uf"/>
+                <constraint firstItem="Jc6-Sy-t7S" firstAttribute="top" secondItem="eK6-l8-Dhd" secondAttribute="top" id="Z0P-6z-XR5"/>
+                <constraint firstItem="KVt-rX-hDc" firstAttribute="leading" secondItem="eK6-l8-Dhd" secondAttribute="leading" id="bmT-vg-FdT"/>
+                <constraint firstAttribute="trailing" secondItem="KVt-rX-hDc" secondAttribute="trailing" id="lgZ-nB-ydD"/>
+                <constraint firstAttribute="trailing" secondItem="Jc6-Sy-t7S" secondAttribute="trailing" id="yGy-3c-Dng"/>
+            </constraints>
+            <point key="canvasLocation" x="133.5" y="-252.5"/>
+        </view>
+    </objects>
+    <resources>
+        <image name="qidong.png" width="640" height="1136"/>
+    </resources>
+</document>

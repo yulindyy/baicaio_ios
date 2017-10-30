@@ -1,0 +1,45 @@
+//
+//  BaseNavigationController.m
+//  CabbageNet
+//
+//  Created by MacAir on 2017/4/5.
+//  Copyright © 2017年 MacAir. All rights reserved.
+//
+
+#import "BaseNavigationController.h"
+
+@interface BaseNavigationController ()
+
+@end
+
+@implementation BaseNavigationController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    
+    self.navigationBar.translucent = NO;
+    self.navigationBar.barTintColor = mAppMainColor;
+    self.navigationBar.titleTextAttributes = [NSDictionary dictionaryWithObject:[UIColor whiteColor] forKey:NSForegroundColorAttributeName];
+    UINavigationBar *navigationBar = self.navigationBar;
+    // bg.png为自己ps出来的想要的背景颜色。
+    [navigationBar setBackgroundImage:[UIImage new] forBarMetrics:UIBarMetricsDefault];
+//    [navigationBar setShadowImage:[UIImage new]];
+    // Do any additional setup after loading the view.
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    
+    // Dispose of any resources that can be recreated.
+}
+
+-(void)pushViewController:(UIViewController *)viewController animated:(BOOL)animated
+{
+    if (self.childViewControllers.count > 0) {
+        viewController.hidesBottomBarWhenPushed = YES;
+    }
+    
+    [super pushViewController:viewController animated:animated];
+}
+
+@end

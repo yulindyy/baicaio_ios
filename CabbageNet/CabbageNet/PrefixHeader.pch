@@ -1,0 +1,39 @@
+
+//
+//  PrefixHeader.pch
+//  CabbageNet
+//
+//  Created by MacAir on 2017/4/5.
+//  Copyright © 2017年 MacAir. All rights reserved.
+//
+
+#ifndef PrefixHeader_pch
+#define PrefixHeader_pch
+#ifdef __OBJC__
+
+#import <UIKit/UIKit.h>
+#import <Foundation/Foundation.h>
+
+#import "AppMacro.h"
+#import "NotificationMacro.h"
+#import "UtilsMacro.h"
+#import "VendorMacro.h"
+#import "UserInfoModel.h"
+
+#import "UIViewExt.h"
+#import "CKHttpCommunicate.h"
+
+#import "IQKeyboardManager.h"
+#import "MBProgressHUD.h"
+#import "MBProgressHUD+Add.h"
+#import "MJExtension.h"
+#import "UIButton+WebCache.h"
+#import "UIImageView+WebCache.h"
+#import "MJRefresh.h"
+
+#import "AFHTTPSessionManager.h"
+#import "AFURLRequestSerialization.h"
+
+#endif
+
+#endif /* PrefixHeader_pch */
