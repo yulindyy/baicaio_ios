@@ -1,4 +1,4 @@
-//
+﻿//
 //  DiscountPrise.m
 //  CabbageNet
 //
@@ -12,7 +12,7 @@
 
 + (BOOL)insertDiscountID:(NSString *)discountID andUser:(NSString *)user andIsDiscount:(BOOL)isDiscount{
     
-    //1.获得数据库文件的路径
+    //1.获得数据库文件的路径1
     NSString *doc =[NSSearchPathForDirectoriesInDomains(NSDocumentDirectory,NSUserDomainMask, YES)  lastObject];
     
     NSString *fileName = [doc stringByAppendingPathComponent:@"database.sqlite"];
